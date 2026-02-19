@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ANAJ: lololololololol XD</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; user-select: none; }
+
+        /* --- START SCREEN --- */
+        #start-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white; font-size: 40px; cursor: pointer;
+        }
+        #start-screen:hover { color: #f00; text-shadow: 0 0 10px red; }
+
+        /* --- WIN SCREEN --- */
+        #win-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 105; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            color: white; font-size: 80px; font-weight: bold;
+        }
+
+        /* --- THE OFFICE VIEW --- */
+        #game-view { position: relative; width: 100vw; height: 100vh; overflow: hidden; display: none; }
+
+        #office-panorama {
+            position: absolute; top: 0; left: 0;
+            width: 130vw; height: 100%;
+            background: repeating-linear-gradient(90deg, #0a0a0a 0px, #151515 50px, #000000 100px);
+            transition: transform 0.1s linear;
+        }
+
+        /* --- DOORS --- */
+        .door-frame {
+            position: absolute; top: 10%; bottom: 0; width: 15%;
+            background: #080808; border: 4px solid #222;
+            box-shadow: inset 0 0 20px #000; z-index: 1; overflow: hidden;
+        }
+        #door-left { left: 5%; }
+        #door-right { right: 5%; }
+
+        .enemy-sprite {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('justb.png');
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            opacity: 0; transition: opacity 0.1s; z-index: 2;
+        }
+        .enemy-sprite.visible { opacity: 1; }
+        #vis-right { transform: scaleX(-1); }
+
+        .metal-door {
+            position: absolute; top: 0; left: 0; width: 100%; height: 0%;
+            background: repeating-linear-gradient(45deg, #333, #444 10px, #222 20px);
+            transition: height 0.15s cubic-bezier(0.4, 0.0, 0.2, 1);
+            box-shadow: 0 5px 10px #000; z-index: 3;
+        }
+        .metal-door.closed { height: 100%; }
+
+        /* --- CONTROLS --- */
+        .button-panel {
+            position: absolute; top: 40%; width: 50px; height: 100px;
+            background: #333; border: 2px solid #555;
+            display: flex; flex-direction: column; align-items: center; justify-content: space-evenly;
+            cursor: pointer; z-index: 5;
+        }
+        #panel-left { left: 21%; }
+        #panel-right { right: 21%; }
+
+        .btn-light { width: 35px; height: 35px; background: #ddd; border-radius: 50%; box-shadow: 0 2px 5px #000; }
+        .btn-door { width: 35px; height: 35px; background: #822; border-radius: 5px; box-shadow: 0 2px 5px #000; }
+
+        /* Light Beams */
+        .light-beam {
+            position: absolute; top: 0; bottom: 0; width: 20%;
+            pointer-events: none; opacity: 0; mix-blend-mode: screen; transition: opacity 0.1s; z-index: 4;
+        }
+        #light-left { left: 5%; width: 15%; background: linear-gradient(to right, rgba(255,255,220,0.2), transparent); }
+        #light-right { right: 5%; width: 15%; background: linear-gradient(to left, rgba(255,255,220,0.2), transparent); }
+
+        /* --- UI & MONITOR --- */
+        #ui-layer { position: absolute; top: 20px; left: 20px; color: white; z-index: 50; pointer-events: none; display: none; }
+        .stat-box { border: 1px solid white; padding: 10px; background: rgba(0,0,0,0.5); font-size: 20px;}
+
+        /* Mute Call Button */
+        #mute-btn {
+            pointer-events: auto; cursor: pointer; border: 1px solid #555;
+            background: #222; color: #888; padding: 5px; font-size: 14px; margin-top: 5px;
+            display: none; /* Only shows when call is playing */
+        }
+        #mute-btn:hover { background: #444; color: white; }
+
+        #monitor-trigger {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 300px; height: 50px; background: rgba(255,255,255,0.1); border: 1px solid #555;
+            color: #888; display: none; align-items: center; justify-content: center;
+            cursor: pointer; z-index: 60; transition: background 0.2s;
+        }
+        #monitor-trigger:hover { background: rgba(255,255,255,0.3); color: white; }
+
+        #cctv-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; transform: translateY(100%); transition: transform 0.3s;
+            z-index: 55; display: flex;
+        }
+        #cctv-screen.active { transform: translateY(0%); }
+
+        #cam-viewport { flex-grow: 1; position: relative; background: #111; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+        #cam-map { width: 300px; background: #222; border-left: 2px solid #444; display: flex; flex-direction: column; padding: 20px; gap: 10px; }
+        .cam-btn { background: #444; color: white; padding: 15px; cursor: pointer; border: 1px solid #666; }
+        .cam-btn.active { background: #684; border-color: #8a6; }
+
+        .static-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://media.giphy.com/media/oEI9uBYSzLpBK/giphy.gif');
+            background-size: cover; opacity: 0.15; pointer-events: none; mix-blend-mode: overlay; z-index: 10;
+        }
+
+        .cam-feed { width: 100%; height: 100%; object-fit: cover; display: none; position: relative; }
+        .cam-feed.active { display: block; }
+
+        /* Camera Enemy */
+        .animatronic-vis {
+            width: 150px; height: 150px;
+            background-image: url('justb-cams.png');
+            background-size: contain; background-repeat: no-repeat; background-position: center;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            display: none; filter: drop-shadow(0 0 5px rgba(0,0,0,0.8));
+        }
+        .animatronic-vis.here { display: block; }
+
+        /* JUMPSCARE */
+        #jumpscare-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: black; z-index: 100; display: none; overflow: hidden;
+        }
+        #jumpscare-face {
+            width: 100vw; height: 100vh;
+            background-image: url('justb-scare.png');
+            background-size: 100% 100%; background-position: center; background-repeat: no-repeat;
+            animation: shake 0.05s infinite; position: absolute; top: 0; left: 0; z-index: 101;
+        }
+        @keyframes shake {
+            0% { transform: translate(5px, 5px) rotate(0deg); }
+            50% { transform: translate(-5px, -5px) rotate(2deg); }
+        }
+        #game-over-msg {
+            position: absolute; bottom: 20%; width: 100%; text-align: center;
+            color: white; font-size: 50px; font-weight: bold;
+            z-index: 102; display: none; text-shadow: 2px 2px 0 red;
+        }
+    </style>
+</head>
+<body>
+
+<audio id="scream-audio" src="hot_men.mp3"></audio>
+<audio id="phone-audio" src="call.mp3"></audio>
+
+<div id="start-screen" onclick="startGame()">
+    <div>CLICK TO START NIGHT 1</div>
+    <div style="font-size: 20px; color: #888; margin-top: 20px;">(Enables Audio)</div>
+</div>
+
+<div id="win-screen">
+    <div>6:00 AM</div>
+    <div style="font-size: 30px; margin-top: 20px; color: #aaa;">YOU SURVIVED</div>
+</div>
+
+<div id="jumpscare-screen">
+    <div id="jumpscare-face"></div>
+    <div id="game-over-msg">GAME OVER</div>
+</div>
+
+<div id="ui-layer">
+    <div class="stat-box">
+        <div id="clock-display">12:00 AM</div>
+        <div>Power: <span id="power-val">100</span>%</div>
+        <div>Usage: <span id="usage-val">1</span></div>
+        <button id="mute-btn" onclick="muteCall()">MUTE CALL</button>
+    </div>
+</div>
+
+<div id="monitor-trigger" onclick="toggleMonitor()">[ FLIP MONITOR ]</div>
+
+<div id="cctv-screen">
+    <div class="static-overlay" id="static-effect"></div>
+    <div id="cam-viewport">
+        <div style="position: absolute; top: 20px; left: 20px; color: white; font-size: 30px; font-weight: bold; z-index: 2;" id="current-cam-name">CAM 1A - STAGE</div>
+        <div id="feed-1a" class="cam-feed active" style="background: radial-gradient(#443, #110);"><div id="enemy-1a" class="animatronic-vis here"></div></div>
+        <div id="feed-1b" class="cam-feed" style="background: radial-gradient(#334, #001);"><div id="enemy-1b" class="animatronic-vis"></div></div>
+        <div id="feed-2a" class="cam-feed" style="background: repeating-linear-gradient(45deg, #222, #333 10px);"><div id="enemy-2a" class="animatronic-vis"></div></div>
+        <div id="feed-4a" class="cam-feed" style="background: repeating-linear-gradient(-45deg, #222, #333 10px);"><div id="enemy-4a" class="animatronic-vis"></div></div>
+        <div id="feed-4b" class="cam-feed" style="background: radial-gradient(#222, #111);"><div id="enemy-4b" class="animatronic-vis"></div></div>
+    </div>
+    <div id="cam-map">
+        <button class="cam-btn active" onclick="switchCam('1a', 'Stage')">CAM 1A</button>
+        <button class="cam-btn" onclick="switchCam('1b', 'Dining')">CAM 1B</button>
+        <div style="height:10px;"></div>
+        <button class="cam-btn" onclick="switchCam('2a', 'West Hall')">CAM 2A</button>
+        <div style="height:10px;"></div>
+        <button class="cam-btn" onclick="switchCam('4a', 'East Hall')">CAM 4A</button>
+        <button class="cam-btn" onclick="switchCam('4b', 'East Corner')">CAM 4B</button>
+    </div>
+</div>
+
+<div id="game-view">
+    <div id="office-panorama">
+        <div id="door-left" class="door-frame">
+            <div id="vis-left" class="enemy-sprite"></div>
+            <div class="metal-door" id="door-vis-left"></div>
+        </div>
+        <div id="panel-left" class="button-panel">
+            <div class="btn-light" onmousedown="toggleLight('left')"></div>
+            <div class="btn-door" onmousedown="toggleDoor('left')"></div>
+        </div>
+        <div id="light-left" class="light-beam"></div>
+        <div id="door-right" class="door-frame">
+            <div id="vis-right" class="enemy-sprite"></div>
+            <div class="metal-door" id="door-vis-right"></div>
+        </div>
+        <div id="panel-right" class="button-panel">
+            <div class="btn-light" onmousedown="toggleLight('right')"></div>
+            <div class="btn-door" onmousedown="toggleDoor('right')"></div>
+        </div>
+        <div id="light-right" class="light-beam"></div>
+    </div>
+</div>
+
+<script>
+    // --- AUDIO ENGINE ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    const SFX = {
+        playTone: (freq, type, duration) => {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        },
+        playNoise: (duration) => {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const bufferSize = audioCtx.sampleRate * duration;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const gain = audioCtx.createGain();
+            gain.gain.value = 0.05;
+            noise.connect(gain);
+            gain.connect(audioCtx.destination);
+            noise.start();
+        },
+        door: () => {
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.3);
+        },
+        blip: () => SFX.playTone(800, 'sine', 0.1),
+        buzz: () => SFX.playTone(60, 'square', 0.1),
+        scream: () => {
+            const audioEl = document.getElementById('scream-audio');
+            audioEl.currentTime = 0;
+            audioEl.play().catch(e => console.log("Audio play failed:", e));
+        },
+        phone: () => {
+            const audioEl = document.getElementById('phone-audio');
+            audioEl.currentTime = 0;
+            audioEl.play().catch(e => console.log("Audio play failed:", e));
+            document.getElementById('mute-btn').style.display = 'block';
+
+            // Auto hide mute button when done
+            audioEl.onended = () => {
+                document.getElementById('mute-btn').style.display = 'none';
+            };
+        },
+        ambience: () => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = 50;
+            gain.gain.value = 0.05;
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+        }
+    };
+
+    // --- GAME STARTUP ---
+    function startGame() {
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('game-view').style.display = 'block';
+        document.getElementById('ui-layer').style.display = 'block';
+        document.getElementById('monitor-trigger').style.display = 'flex';
+
+        audioCtx.resume().then(() => {
+            SFX.ambience();
+            SFX.phone(); // PLAY PHONE CALL
+            gameLoop();
+            setInterval(attemptMove, 2000);
+            setInterval(gameTimerTick, 1000);
+        });
+    }
+
+    // --- PHONE MUTE ---
+    function muteCall() {
+        const audioEl = document.getElementById('phone-audio');
+        audioEl.pause();
+        document.getElementById('mute-btn').style.display = 'none';
+    }
+
+    // --- STATE ---
+    let state = {
+        leftDoor: false, rightDoor: false, monitorUp: false,
+        power: 100, usage: 1, gameOver: false,
+        secondsPassed: 0, hoursPassed: 0
+    };
+
+    let enemy = {
+        location: '1a', aiLevel: 12, patience: 20,
+        isAtDoor: false, doorSide: null
+    };
+
+    // --- DOM & MOUSE ---
+    const panorama = document.getElementById('office-panorama');
+    const cctv = document.getElementById('cctv-screen');
+    const monitorBtn = document.getElementById('monitor-trigger');
+    const clockDisp = document.getElementById('clock-display');
+
+    let mouseX = 0;
+    document.addEventListener('mousemove', (e) => {
+        if (!state.monitorUp && !state.gameOver) mouseX = e.clientX / window.innerWidth;
+    });
+
+    function updateView() {
+        if (state.monitorUp || state.gameOver) return;
+        const maxScroll = (window.innerWidth * 1.3) - window.innerWidth;
+        const targetX = - (mouseX * maxScroll);
+        panorama.style.transform = `translateX(${targetX}px)`;
+    }
+
+    // --- CONTROLS ---
+    window.toggleMonitor = () => {
+        if (state.power <= 0 || state.gameOver) return;
+        state.monitorUp = !state.monitorUp;
+
+        if(state.monitorUp) {
+            cctv.classList.add('active');
+            monitorBtn.innerText = "[ PUT DOWN ]";
+            SFX.playNoise(0.2);
+        } else {
+            cctv.classList.remove('active');
+            monitorBtn.innerText = "[ FLIP MONITOR ]";
+            SFX.door();
+        }
+
+        if(state.monitorUp && enemy.isAtDoor && enemy.patience < 20) {
+            triggerJumpscare();
+        }
+        updateUsage();
+    };
+
+    window.switchCam = (camId, name) => {
+        if (!state.monitorUp || state.gameOver) return;
+        SFX.blip();
+        document.querySelectorAll('.cam-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        document.querySelectorAll('.cam-feed').forEach(f => f.classList.remove('active'));
+        document.getElementById('feed-' + camId).classList.add('active');
+        document.getElementById('current-cam-name').innerText = `CAM ${camId.toUpperCase()} - ${name.toUpperCase()}`;
+    };
+
+    window.toggleDoor = (side) => {
+        if (state.power <= 0 || state.monitorUp || state.gameOver) return;
+        SFX.door();
+        if(side === 'left') {
+            state.leftDoor = !state.leftDoor;
+            document.getElementById('door-vis-left').classList.toggle('closed');
+        } else {
+            state.rightDoor = !state.rightDoor;
+            document.getElementById('door-vis-right').classList.toggle('closed');
+        }
+        setTimeout(() => {
+            if(enemy.isAtDoor) {
+                if(enemy.doorSide === 'left' && state.leftDoor) enemyLeaves();
+                if(enemy.doorSide === 'right' && state.rightDoor) enemyLeaves();
+            }
+        }, 1500);
+        updateUsage();
+    };
+
+    window.toggleLight = (side) => {
+        if (state.power <= 0 || state.monitorUp || state.gameOver) return;
+        SFX.buzz();
+        const light = document.getElementById(side === 'left' ? 'light-left' : 'light-right');
+        light.style.opacity = 1;
+        if (enemy.isAtDoor) {
+            if (side === 'left' && enemy.doorSide === 'left') {
+                document.getElementById('vis-left').classList.add('visible');
+                SFX.playTone(100, 'sawtooth', 0.1);
+            }
+            if (side === 'right' && enemy.doorSide === 'right') {
+                document.getElementById('vis-right').classList.add('visible');
+                SFX.playTone(100, 'sawtooth', 0.1);
+            }
+        }
+        setTimeout(() => {
+            light.style.opacity = 0;
+            document.getElementById('vis-left').classList.remove('visible');
+            document.getElementById('vis-right').classList.remove('visible');
+        }, 800);
+        updateUsage();
+    };
+
+    function updateUsage() {
+        let u = 1;
+        if(state.leftDoor) u++; if(state.rightDoor) u++; if(state.monitorUp) u++;
+        state.usage = u;
+        document.getElementById('usage-val').innerText = u;
+    }
+
+    // --- AI SYSTEM ---
+    function updateEnemyVisuals() {
+        document.querySelectorAll('.animatronic-vis').forEach(el => el.classList.remove('here'));
+        if (enemy.isAtDoor) return;
+        const dot = document.getElementById('enemy-' + enemy.location);
+        if(dot) dot.classList.add('here');
+    }
+
+    function enemyLeaves() {
+        enemy.isAtDoor = false; enemy.doorSide = null; enemy.location = '1b'; enemy.patience = 20;
+        updateEnemyVisuals();
+        console.log("Enemy Reset");
+    }
+
+    function attemptMove() {
+        if(state.gameOver) return;
+
+        if (state.hoursPassed < 2) {
+            return;
+        }
+
+        if(enemy.isAtDoor) {
+            enemy.patience -= 10;
+            let safe = false;
+            if(enemy.doorSide === 'left' && state.leftDoor) safe = true;
+            if(enemy.doorSide === 'right' && state.rightDoor) safe = true;
+            if(enemy.patience <= 0 && !safe) triggerJumpscare();
+            return;
+        }
+
+        const roll = Math.floor(Math.random() * 20) + 1;
+        if(roll <= enemy.aiLevel) moveEnemy();
+    }
+
+    function moveEnemy() {
+        if(enemy.location === '1a') enemy.location = '1b';
+        else if(enemy.location === '1b') enemy.location = Math.random() > 0.5 ? '2a' : '4a';
+        else if(enemy.location === '2a') { enemy.isAtDoor = true; enemy.doorSide = 'left'; enemy.location = 'door'; }
+        else if(enemy.location === '4a') enemy.location = '4b';
+        else if(enemy.location === '4b') { enemy.isAtDoor = true; enemy.doorSide = 'right'; enemy.location = 'door'; }
+
+        SFX.playNoise(0.1);
+        const staticFX = document.getElementById('static-effect');
+        staticFX.style.opacity = 0.8;
+        setTimeout(() => staticFX.style.opacity = 0.15, 500);
+        updateEnemyVisuals();
+    }
+
+    function triggerJumpscare() {
+        state.gameOver = true;
+        // Mute phone if playing
+        document.getElementById('phone-audio').pause();
+        document.getElementById('mute-btn').style.display = 'none';
+
+        SFX.scream();
+        if(state.monitorUp) { state.monitorUp = false; cctv.classList.remove('active'); }
+        document.getElementById('jumpscare-screen').style.display = 'block';
+        setTimeout(() => { document.getElementById('game-over-msg').style.display = 'block'; }, 2000);
+    }
+
+    function winGame() {
+        state.gameOver = true;
+        document.getElementById('win-screen').style.display = 'flex';
+        // Stop phone if playing
+        document.getElementById('phone-audio').pause();
+        if(state.monitorUp) { cctv.classList.remove('active'); }
+    }
+
+    // --- LOOPS ---
+    function gameTimerTick() {
+        if(state.gameOver) return;
+
+        // 1. DRAIN POWER (Reduced rate: 0.14)
+        if(state.power > 0) {
+            state.power -= (0.14 * state.usage);
+            if(state.power < 0) state.power = 0;
+            document.getElementById('power-val').innerText = Math.floor(state.power);
+        } else {
+            triggerJumpscare();
+            return;
+        }
+
+        // 2. ADVANCE CLOCK
+        state.secondsPassed++;
+        state.hoursPassed = Math.floor(state.secondsPassed / 60);
+
+        let displayHour = state.hoursPassed === 0 ? 12 : state.hoursPassed;
+        clockDisp.innerText = displayHour + ":00 AM";
+
+        if(state.hoursPassed >= 6) {
+            winGame();
+        }
+    }
+
+    function gameLoop() {
+        updateView();
+        requestAnimationFrame(gameLoop);
+    }
+</script>
+</body>
+</html>
